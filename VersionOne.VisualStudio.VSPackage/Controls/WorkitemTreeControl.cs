@@ -18,429 +18,474 @@ using VersionOne.VisualStudio.VSPackage.TreeViewEditors;
 
 using NodeComboBox = VersionOne.VisualStudio.VSPackage.TreeViewEditors.NodeComboBox;
 
-namespace VersionOne.VisualStudio.VSPackage.Controls {
-    /// <summary>
-    /// Task List control displaying V1 tasks for the currently selected Project.
-    /// </summary>
-    public partial class WorkitemTreeControl : V1UserControl, IWorkitemTreeView {        
-        private readonly Dictionary<string, string> columnToAttributeMappings = new Dictionary<string, string>();
-        
-        private StoryTreeModel storyTreeModel;
+namespace VersionOne.VisualStudio.VSPackage.Controls
+{
+	/// <summary>
+	/// Task List control displaying V1 tasks for the currently selected Project.
+	/// </summary>
+	public partial class WorkitemTreeControl : V1UserControl, IWorkitemTreeView
+	{
+		private readonly Dictionary<string, string> columnToAttributeMappings = new Dictionary<string, string>();
 
-        private bool addTaskEnabled;
-        private bool addDefectEnabled;
-        private bool addTestEnabled;
+		private StoryTreeModel storyTreeModel;
 
-        private readonly Configuration configuration;
-        private readonly ISettings settings;
+		private bool addTaskEnabled;
+		private bool addDefectEnabled;
+		private bool addTestEnabled;
 
-        public WorkitemTreeController Controller { get; set; }
+		private readonly Configuration configuration;
+		private readonly ISettings settings;
 
-        public string Title {
-            get {
-                var parentWindow = ParentWindowResolver.Resolve();
-                return parentWindow != null ? parentWindow.Caption : null;
-            }
-            set {
-                var parentWindow = ParentWindowResolver.Resolve();
+		public WorkitemTreeController Controller { get; set; }
 
-                if(parentWindow != null) {
-                    parentWindow.Caption = value;
-                }
-            }
-        }
+		public string Title
+		{
+			get
+			{
+				var parentWindow = ParentWindowResolver.Resolve();
+				return parentWindow != null ? parentWindow.Caption : null;
+			}
+			set
+			{
+				var parentWindow = ParentWindowResolver.Resolve();
 
-        public WorkitemDescriptor CurrentWorkitemDescriptor {
-            get { return tvWorkitems.SelectedNode == null ? null : tvWorkitems.SelectedNode.Tag as WorkitemDescriptor; }
-        }
+				if (parentWindow != null)
+				{
+					parentWindow.Caption = value;
+				}
+			}
+		}
 
-        public StoryTreeModel Model {
-            get { return storyTreeModel; }
-            set {
-                storyTreeModel = value;
-                tvWorkitems.BeginUpdate();
-                tvWorkitems.Model = null;
-                tvWorkitems.Model = value;
-                tvWorkitems.EndUpdate();
-            }
-        }
+		public WorkitemDescriptor CurrentWorkitemDescriptor
+		{
+			get { return tvWorkitems.SelectedNode == null ? null : tvWorkitems.SelectedNode.Tag as WorkitemDescriptor; }
+		}
 
-        public bool AddTaskCommandEnabled {
-            get { return addTaskEnabled; }
-            set {
-                addTaskEnabled = value;
-                btnAddTask.Enabled = value;
-            }
-        }
+		public StoryTreeModel Model
+		{
+			get { return storyTreeModel; }
+			set
+			{
+				storyTreeModel = value;
+				tvWorkitems.BeginUpdate();
+				tvWorkitems.Model = null;
+				tvWorkitems.Model = value;
+				tvWorkitems.EndUpdate();
+			}
+		}
 
-        public bool AddDefectCommandEnabled {
-            get { return addDefectEnabled; }
-            set {
-                addDefectEnabled = value;
-                btnAddDefect.Enabled = value;
-            }
-        }
+		public bool AddTaskCommandEnabled
+		{
+			get { return addTaskEnabled; }
+			set
+			{
+				addTaskEnabled = value;
+				btnAddTask.Enabled = value;
+			}
+		}
 
-        public bool AddTestCommandEnabled {
-            get { return addTestEnabled; }
-            set {
-                addTestEnabled = value;
-                btnAddTest.Enabled = value;
-            }
-        }
+		public bool AddDefectCommandEnabled
+		{
+			get { return addDefectEnabled; }
+			set
+			{
+				addDefectEnabled = value;
+				btnAddDefect.Enabled = value;
+			}
+		}
 
-        private readonly IWaitCursor waitCursor;
+		public bool AddTestCommandEnabled
+		{
+			get { return addTestEnabled; }
+			set
+			{
+				addTestEnabled = value;
+				btnAddTest.Enabled = value;
+			}
+		}
 
-        public WorkitemTreeControl(Configuration configuration, ISettings settings, IDataLayer dataLayer, [Named("Workitems")] ComponentResolver<IParentWindow> parentWindowResolver) 
-                : base(parentWindowResolver, dataLayer) {
-            InitializeComponent();
+		private readonly IWaitCursor waitCursor;
 
-            this.configuration = configuration;
-            this.settings = settings;
+		public WorkitemTreeControl(Configuration configuration, ISettings settings, IDataLayer dataLayer, [Named("Workitems")] ComponentResolver<IParentWindow> parentWindowResolver)
+			: base(parentWindowResolver, dataLayer)
+		{
+			InitializeComponent();
 
-            btnOnlyMyTasks.Checked = settings.ShowMyTasks;
+			this.configuration = configuration;
+			this.settings = settings;
 
-            tvWorkitems.SelectionChanged += tvWorkitems_SelectionChanged;
-            btnSave.Click += toolBtnSave_Click;
-            btnRefresh.Click += toolBtnRefresh_Click;
-            btnOnlyMyTasks.CheckedChanged += btnShowMyTasks_CheckedChanged;
-            
-            miSave.Click += miSave_Click;
-            miRevert.Click += miRevert_Click;
-            miSignup.Click += miSignup_Click;
-            miQuickClose.Click += miQuickClose_Click;
-            miClose.Click += miClose_Click;
-            miNewTask.Click += AddTask_Click;
-            miNewDefect.Click += AddDefect_Click;
-            miNewTest.Click += AddTest_Click;
-            tvWorkitems.ContextMenu.Popup += ContextMenu_Popup;
+			btnOnlyMyTasks.Checked = settings.ShowMyTasks;
 
-            btnAddTask.Click += AddTask_Click;
-            btnAddDefect.Click += AddDefect_Click;
-            btnAddTest.Click += AddTest_Click;
+			tvWorkitems.SelectionChanged += tvWorkitems_SelectionChanged;
+			btnSave.Click += toolBtnSave_Click;
+			btnRefresh.Click += toolBtnRefresh_Click;
+			btnOnlyMyTasks.CheckedChanged += btnShowMyTasks_CheckedChanged;
 
-            VisibleChanged += (sender, e) => RefreshProperties();
-            CursorChanged += (sender, e) => RefreshProperties();
-            Enter += (sender, e) => RefreshProperties();
+			miSave.Click += miSave_Click;
+			miRevert.Click += miRevert_Click;
+			miSignup.Click += miSignup_Click;
+			miQuickClose.Click += miQuickClose_Click;
+			miClose.Click += miClose_Click;
+			miNewTask.Click += AddTask_Click;
+			miNewDefect.Click += AddDefect_Click;
+			miNewTest.Click += AddTest_Click;
+			tvWorkitems.ContextMenu.Popup += ContextMenu_Popup;
 
-            waitCursor = GetWaitCursor();
+			btnAddTask.Click += AddTask_Click;
+			btnAddDefect.Click += AddDefect_Click;
+			btnAddTest.Click += AddTest_Click;
 
-            tvWorkitems.AsyncExpanding = true;
-            tvWorkitems.LoadOnDemand = true;
-            tvWorkitems.Expanding += tvWorkitems_Expanding;
-            tvWorkitems.Expanded += tvWorkitems_Expanded;
-        }
+			VisibleChanged += (sender, e) => RefreshProperties();
+			CursorChanged += (sender, e) => RefreshProperties();
+			Enter += (sender, e) => RefreshProperties();
 
-        private void tvWorkitems_Expanded(object sender, TreeViewAdvEventArgs e) {
-            if(!IsHandleCreated) {
-                return;
-            }
+			waitCursor = GetWaitCursor();
 
-            Invoke(new Action(() => waitCursor.Hide()));
-        }
+			tvWorkitems.AsyncExpanding = true;
+			tvWorkitems.LoadOnDemand = true;
+			tvWorkitems.Expanding += tvWorkitems_Expanding;
+			tvWorkitems.Expanded += tvWorkitems_Expanded;
+		}
 
-        private void tvWorkitems_Expanding(object sender, TreeViewAdvEventArgs e) {
-            if(!IsHandleCreated) {
-                return;
-            }
-
-            Invoke(new Action(() => waitCursor.Show()));
-        }
-
-        public override void SetAccessibleControlsEnabled(bool enabled) {
-            tvWorkitems.Enabled = enabled;
-            tsMenu.Enabled = enabled;
-        }
-
-        public void ShowErrorMessage(string message) {
-            MessageBox.Show(message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
-        public void ShowValidationInformationDialog(string message) {
-            new ValidationDialog(message).ShowDialog(this);
-        }
-
-        public void ReconfigureTreeColumns() {
-			if (!DataLayer.IsConnected) {
+		private void tvWorkitems_Expanded(object sender, TreeViewAdvEventArgs e)
+		{
+			if (!IsHandleCreated)
+			{
 				return;
 			}
 
-            tvWorkitems.HideEditor();
-            tvWorkitems.Columns.Clear();
-            tvWorkitems.NodeControls.Clear();
-            columnToAttributeMappings.Clear();
+			Invoke(new Action(() => waitCursor.Hide()));
+		}
 
-			foreach (var column in configuration.GridSettings.Columns) {
-                if (column.EffortTracking && !DataLayer.EffortTracking.TrackEffort) {
+		private void tvWorkitems_Expanding(object sender, TreeViewAdvEventArgs e)
+		{
+			if (!IsHandleCreated)
+			{
+				return;
+			}
+
+			Invoke(new Action(() => waitCursor.Show()));
+		}
+
+		public override void SetAccessibleControlsEnabled(bool enabled)
+		{
+			tvWorkitems.Enabled = enabled;
+			tsMenu.Enabled = enabled;
+		}
+
+		public void ShowErrorMessage(string message)
+		{
+			MessageBox.Show(message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		public void ShowValidationInformationDialog(string message)
+		{
+			new ValidationDialog(message).ShowDialog(this);
+		}
+
+		public void ReconfigureTreeColumns()
+		{
+			if (!DataLayer.IsConnected)
+			{
+				return;
+			}
+
+			tvWorkitems.HideEditor();
+			tvWorkitems.Columns.Clear();
+			tvWorkitems.NodeControls.Clear();
+			columnToAttributeMappings.Clear();
+
+			foreach (var column in configuration.GridSettings.Columns)
+			{
+				if (column.EffortTracking && !DataLayer.EffortTracking.TrackEffort)
+				{
 					continue;
 				}
 
-			    var dataPropertyName = DataLayer.LocalizerResolve(column.Name);
+				var dataPropertyName = DataLayer.LocalizerResolve(column.Name);
 
-                columnToAttributeMappings.Add(dataPropertyName, column.Attribute);
+				columnToAttributeMappings.Add(dataPropertyName, column.Attribute);
 
-			    var treeColumn = new TreeColumn(dataPropertyName, column.Width) { SortOrder = SortOrder.None, TooltipText = dataPropertyName };
+				var treeColumn = new TreeColumn(dataPropertyName, column.Width) { SortOrder = SortOrder.None, TooltipText = dataPropertyName };
 
-			    switch(column.Type) {
-                    case "String":
-                    case "Effort":
-                        var textEditor = new NodeTextBox();
-                        ConfigureEditor(textEditor, dataPropertyName);
-                        //textEditor.IsColumnReadOnly = column.ReadOnly;
-                        textEditor.ParentColumn = treeColumn;
-                        textEditor.IsEditEnabledValueNeeded += CheckCellEditability;
-                        tvWorkitems.NodeControls.Add(textEditor);
-                        break;
-                    case "List":
-                        var listEditor = new NodeComboBox();
-                        ConfigureEditor(listEditor, dataPropertyName);
-                        listEditor.EditEnabled = !column.ReadOnly;
-                        listEditor.ParentColumn = treeColumn;
-                        listEditor.IsEditEnabledValueNeeded += CheckCellEditability;
-                        tvWorkitems.NodeControls.Add(listEditor);
-                        break;
-                    case "Multi":
-			            var listBoxEditor = new NodeListBox {ParentTree = tvWorkitems};
-			            ConfigureEditor(listBoxEditor, dataPropertyName);
-                        listBoxEditor.EditEnabled = !column.ReadOnly;
-                        listBoxEditor.ParentColumn = treeColumn;
-                        listBoxEditor.IsEditEnabledValueNeeded += CheckCellEditability;
-                        tvWorkitems.NodeControls.Add(listBoxEditor);
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
+				switch (column.Type)
+				{
+					case "String":
+					case "Effort":
+						var textEditor = new NodeTextBox();
+						ConfigureEditor(textEditor, dataPropertyName);
+						//textEditor.IsColumnReadOnly = column.ReadOnly;
+						textEditor.ParentColumn = treeColumn;
+						textEditor.IsEditEnabledValueNeeded += CheckCellEditability;
+						tvWorkitems.NodeControls.Add(textEditor);
+						break;
+					case "List":
+						var listEditor = new NodeComboBox();
+						ConfigureEditor(listEditor, dataPropertyName);
+						listEditor.EditEnabled = !column.ReadOnly;
+						listEditor.ParentColumn = treeColumn;
+						listEditor.IsEditEnabledValueNeeded += CheckCellEditability;
+						tvWorkitems.NodeControls.Add(listEditor);
+						break;
+					case "Multi":
+						var listBoxEditor = new NodeListBox { ParentTree = tvWorkitems };
+						ConfigureEditor(listBoxEditor, dataPropertyName);
+						listBoxEditor.EditEnabled = !column.ReadOnly;
+						listBoxEditor.ParentColumn = treeColumn;
+						listBoxEditor.IsEditEnabledValueNeeded += CheckCellEditability;
+						tvWorkitems.NodeControls.Add(listBoxEditor);
+						break;
+					default:
+						throw new NotSupportedException();
+				}
 
 				tvWorkitems.Columns.Add(treeColumn);
 			}
 
-            AddStateIcon();
-        }
+			AddStateIcon();
+		}
 
-        private void AddStateIcon() {
-            if (tvWorkitems.Columns.Count > 0) {
-                var nodeIcon = new NodeStateIcon {DataPropertyName = "Icon", ParentColumn = tvWorkitems.Columns[0]};
-                tvWorkitems.NodeControls.Insert(0, nodeIcon);
-            }
-        }
+		private void AddStateIcon()
+		{
+			if (tvWorkitems.Columns.Count > 0)
+			{
+				var nodeIcon = new NodeStateIcon { DataPropertyName = "Icon", ParentColumn = tvWorkitems.Columns[0] };
+				tvWorkitems.NodeControls.Insert(0, nodeIcon);
+			}
+		}
 
-    	private static void ConfigureEditor(BaseTextControl editor, string propertyName) {
-            editor.DataPropertyName = propertyName;
-            editor.IncrementalSearchEnabled = true;
-            editor.LeftMargin = 3;
-            editor.Trimming = StringTrimming.EllipsisCharacter;
-            editor.UseCompatibleTextRendering = true;
-        }
+		private static void ConfigureEditor(BaseTextControl editor, string propertyName)
+		{
+			editor.DataPropertyName = propertyName;
+			editor.IncrementalSearchEnabled = true;
+			editor.LeftMargin = 3;
+			editor.Trimming = StringTrimming.EllipsisCharacter;
+			editor.UseCompatibleTextRendering = true;
+		}
 
-        /// <summary> 
-        /// Let this control process the mnemonics.
-        /// </summary>
-        protected override bool ProcessDialogChar(char charCode) {
-            // If we're the top-level form or control, we need to do the mnemonic handling
-            if (charCode != ' ' && ProcessMnemonic(charCode)) {
-                return true;
-            }
-            return base.ProcessDialogChar(charCode);
-        }
+		/// <summary> 
+		/// Let this control process the mnemonics.
+		/// </summary>
+		protected override bool ProcessDialogChar(char charCode)
+		{
+			// If we're the top-level form or control, we need to do the mnemonic handling
+			if (charCode != ' ' && ProcessMnemonic(charCode))
+			{
+				return true;
+			}
+			return base.ProcessDialogChar(charCode);
+		}
 
-        // TODO refactor, move logic to Controller
-        private void UpdateMenuItemsVisibility(Workitem workitem) {
-            miSave.Enabled = workitem != null && workitem.HasChanges && !(workitem.Parent != null && workitem.Parent.IsVirtual);
-            miRevert.Enabled = workitem != null && workitem.HasChanges;
-            miSignup.Enabled = workitem != null && !workitem.IsMine() && workitem.CanSignup && !workitem.IsVirtual;
-            miQuickClose.Enabled = workitem != null && workitem.CanQuickClose && !workitem.IsVirtual;
-            miClose.Enabled = workitem != null && !workitem.IsVirtual;
-            miNewTask.Enabled = workitem != null && AddTaskCommandEnabled;
-            miNewTest.Enabled = workitem != null && AddTestCommandEnabled;
-            miNewDefect.Enabled = AddDefectCommandEnabled;
-        }
+		// TODO refactor, move logic to Controller
+		private void UpdateMenuItemsVisibility(Workitem workitem)
+		{
+			miSave.Enabled = workitem != null && workitem.HasChanges && !(workitem.Parent != null && workitem.Parent.IsVirtual);
+			miRevert.Enabled = workitem != null && workitem.HasChanges;
+			miSignup.Enabled = workitem != null && !workitem.IsMine() && workitem.CanSignup && !workitem.IsVirtual;
+			miQuickClose.Enabled = workitem != null && workitem.CanQuickClose && !workitem.IsVirtual;
+			miClose.Enabled = workitem != null && !workitem.IsVirtual;
+			miNewTask.Enabled = workitem != null && AddTaskCommandEnabled;
+			miNewTest.Enabled = workitem != null && AddTestCommandEnabled;
+			miNewDefect.Enabled = AddDefectCommandEnabled;
+		}
 
-        #region Event handlers
+		#region Event handlers
 
-        private void ContextMenu_Popup(object sender, EventArgs e) {
-            tvWorkitems.HideEditor();
-            var selectedNodeExists = tvWorkitems.SelectedNode != null;
+		private void ContextMenu_Popup(object sender, EventArgs e)
+		{
+			tvWorkitems.HideEditor();
+			var selectedNodeExists = tvWorkitems.SelectedNode != null;
 
-            var item = selectedNodeExists ? ((WorkitemDescriptor) tvWorkitems.SelectedNode.Tag).Workitem : null;
-            UpdateMenuItemsVisibility(item);
-        }
+			var item = selectedNodeExists ? ((WorkitemDescriptor)tvWorkitems.SelectedNode.Tag).Workitem : null;
+			UpdateMenuItemsVisibility(item);
+		}
 
-        private void AddTask_Click(object sender, EventArgs e) {
-            Controller.AddTask();
-        }
+		private void AddTask_Click(object sender, EventArgs e)
+		{
+			Controller.AddTask();
+		}
 
-        private void AddDefect_Click(object sender, EventArgs e) {
-            Controller.AddDefect();
-        }
+		private void AddDefect_Click(object sender, EventArgs e)
+		{
+			Controller.AddDefect();
+		}
 
-        private void AddTest_Click(object sender, EventArgs e) {
-            Controller.AddTest();
-        }
+		private void AddTest_Click(object sender, EventArgs e)
+		{
+			Controller.AddTest();
+		}
 
-        private void tvWorkitems_SelectionChanged(object sender, EventArgs e) {
-            Controller.HandleTreeSelectionChanged();
-        }
+		private void tvWorkitems_SelectionChanged(object sender, EventArgs e)
+		{
+			Controller.HandleTreeSelectionChanged();
+		}
 
-        private void btnShowMyTasks_CheckedChanged(object sender, EventArgs e) {
-            tvWorkitems.HideEditor();
-            Controller.HandleFilteringByOwner(btnOnlyMyTasks.Checked);
-        }
+		private void btnShowMyTasks_CheckedChanged(object sender, EventArgs e)
+		{
+			tvWorkitems.HideEditor();
+			Controller.HandleFilteringByOwner(btnOnlyMyTasks.Checked);
+		}
 
-        private void toolBtnRefresh_Click(object sender, EventArgs e) {
-            tvWorkitems.HideEditor();
-            Controller.HandleRefreshCommand();
-        }
+		private void toolBtnRefresh_Click(object sender, EventArgs e)
+		{
+			tvWorkitems.HideEditor();
+			Controller.HandleRefreshCommand();
+		}
 
-        private void toolBtnSave_Click(object sender, EventArgs e) {
-            tvWorkitems.HideEditor();
-            Controller.HandleSaveCommand();
-        }
+		private void toolBtnSave_Click(object sender, EventArgs e)
+		{
+			tvWorkitems.HideEditor();
+			Controller.HandleSaveCommand();
+		}
 
-        private void miRevert_Click(object sender, EventArgs e) {
-            Controller.RevertItem();
-        }
+		private void miRevert_Click(object sender, EventArgs e)
+		{
+			Controller.RevertItem();
+		}
 
-        private void miSignup_Click(object sender, EventArgs e) {
-            Controller.SignupItem();
-        }
+		private void miSignup_Click(object sender, EventArgs e)
+		{
+			Controller.SignupItem();
+		}
 
-        private void miSave_Click(object sender, EventArgs e) {
+		private void miSave_Click(object sender, EventArgs e)
+		{
 			Controller.CommitItem();
-        }
+		}
 
-        private void miQuickClose_Click(object sender, EventArgs e) {
-            Controller.QuickCloseItem();
-        }
+		private void miQuickClose_Click(object sender, EventArgs e)
+		{
+			Controller.QuickCloseItem();
+		}
 
-        private void miClose_Click(object sender, EventArgs e) {
-            if(CurrentWorkitemDescriptor != null) {
-                var workitem = CurrentWorkitemDescriptor.Workitem;
-                var result = new CloseWorkitemDialog(workitem).ShowDialog(this);
-                
-                if(result == DialogResult.OK) {
-                    Controller.CloseItem(workitem);
-                }
-            }
-        }
+		private void miClose_Click(object sender, EventArgs e)
+		{
+			if (CurrentWorkitemDescriptor != null)
+			{
+				var workitem = CurrentWorkitemDescriptor.Workitem;
+				var result = new CloseWorkitemDialog(workitem).ShowDialog(this);
 
-        private void CheckCellEditability(object sender, NodeControlValueEventArgs e) {
-            var descriptor = (WorkitemDescriptor) e.Node.Tag;
-            var item = descriptor.Workitem;
+				if (result == DialogResult.OK)
+				{
+					Controller.CloseItem(workitem);
+				}
+			}
+		}
 
-            var columnName = (sender as BaseTextControl).DataPropertyName;
-            var propertyName = columnToAttributeMappings[columnName];
-            var isReadOnly = item.IsPropertyReadOnly(propertyName);
-            
-            if(sender is NodeTextBox) {
-                var textBox = (NodeTextBox) sender;
-                //textBox.IsPropertyReadOnly = isReadOnly;
-                //textBox.EditorContextMenu = textBox.IsReadOnly ? CreateReadonlyTextBoxContextMenu(textBox) : null;
-            }
+		private void CheckCellEditability(object sender, NodeControlValueEventArgs e)
+		{
+			var descriptor = (WorkitemDescriptor)e.Node.Tag;
+			var item = descriptor.Workitem;
 
-            if(sender is NodeComboBox) {
-                var editor = (NodeComboBox) sender;
-                var dataSource = DataLayer.GetListPropertyValues(item.TypePrefix + propertyName);
-                editor.DropDownItems.Clear();
-                editor.DropDownItems.AddRange(dataSource);
-            }
+			var columnName = (sender as BaseTextControl).DataPropertyName;
+			var propertyName = columnToAttributeMappings[columnName];
+			var isReadOnly = item.IsPropertyReadOnly(propertyName);
 
-            if(sender is NodeListBox) {
-                var editor = (NodeListBox) sender;
-                var dataSource = DataLayer.GetListPropertyValues(item.TypePrefix + propertyName);
-                editor.DropDownItems.Clear();
-                editor.DropDownItems.AddRange(dataSource);
-            }
-        }
+			if (sender is NodeTextBox)
+			{
+				var textBox = (NodeTextBox)sender;
+				//textBox.IsPropertyReadOnly = isReadOnly;
+				//textBox.EditorContextMenu = textBox.IsReadOnly ? CreateReadonlyTextBoxContextMenu(textBox) : null;
+			}
 
-        #endregion
+			if (sender is NodeComboBox)
+			{
+				var editor = (NodeComboBox)sender;
+				var dataSource = DataLayer.GetListPropertyValues(item.TypePrefix + propertyName);
+				editor.DropDownItems.Clear();
+				editor.DropDownItems.AddRange(dataSource);
+			}
+
+			if (sender is NodeListBox)
+			{
+				var editor = (NodeListBox)sender;
+				var dataSource = DataLayer.GetListPropertyValues(item.TypePrefix + propertyName);
+				editor.DropDownItems.Clear();
+				editor.DropDownItems.AddRange(dataSource);
+			}
+		}
+
+		#endregion
 
 
-        private static ContextMenu CreateReadonlyTextBoxContextMenu(NodeTextBox textBox) {
-            var menu = new ContextMenu();
-            var miCopyValue = new MenuItem("Copy");
-            // VP
-            //miCopyValue.Click += (sender, e) => textBox.Copy(((NodeTextBox)textBox).EditorTextBox);
-            menu.MenuItems.Add(miCopyValue);
-            return menu;
-        }
+		private static ContextMenu CreateReadonlyTextBoxContextMenu(NodeTextBox textBox)
+		{
+			var menu = new ContextMenu();
+			var miCopyValue = new MenuItem("Copy");
+			// VP
+			//miCopyValue.Click += (sender, e) => textBox.Copy(((NodeTextBox)textBox).EditorTextBox);
+			menu.MenuItems.Add(miCopyValue);
+			return menu;
+		}
 
-        public void RefreshProperties() {
-            var node = tvWorkitems.SelectedNode;
-            WorkitemDescriptor descriptor = null;
-            
-            if (node != null) {
-                var oldDescriptor = (WorkitemDescriptor) node.Tag;
-                descriptor = oldDescriptor.GetDetailedDescriptor(
-                    configuration.AssetDetail.GetColumns(oldDescriptor.Workitem.TypePrefix), 
-                    PropertyUpdateSource.WorkitemPropertyView);
-            }
+		public void RefreshProperties()
+		{
+			var node = tvWorkitems.SelectedNode;
+			WorkitemDescriptor descriptor = null;
 
-            UpdatePropertyView(descriptor);
-        }
+			if (node != null)
+			{
+				var oldDescriptor = (WorkitemDescriptor)node.Tag;
+				descriptor = oldDescriptor.GetDetailedDescriptor(
+					configuration.AssetDetail.GetColumns(oldDescriptor.Workitem.TypePrefix),
+					PropertyUpdateSource.WorkitemPropertyView);
+			}
 
-        public void SetSelection() {
-            if (tvWorkitems.SelectedNode != null) {
-                return;
-            }
+			UpdatePropertyView(descriptor);
+		}
 
-            if (CurrentWorkitemId != null) {
-                var selectedNode = tvWorkitems.FindNodeByMather(node => {
-                                                                    var desc = node.Tag as WorkitemDescriptor;
-                                                                    return desc != null && desc.Workitem.Id == CurrentWorkitemId;
-                                                                });
-                if (selectedNode != null) {
-                    tvWorkitems.SelectedNode = selectedNode;
-                    return;
-                }
-            }
-            
-            var root = tvWorkitems.Root;
-            
-            if (root.Children.Count > 0) {
-                tvWorkitems.SelectedNode = root.Children[0];
-            } else {
-                ResetPropertyView();
-            }
-        }
+		public void SetSelection()
+		{
+			if (tvWorkitems.SelectedNode != null)
+			{
+				return;
+			}
 
-        public void SelectWorkitem(Workitem item) {
-            var foundNode = tvWorkitems.FindNodeByMather(node => {
-                                                             var descriptor = node.Tag as WorkitemDescriptor;
-                                                             return descriptor != null && item.Equals(descriptor.Workitem);
-                                                         });
-            if(foundNode != null) {
-                tvWorkitems.SelectedNode = foundNode;
-            }
-        }
+			if (CurrentWorkitemId != null)
+			{
+				var selectedNode = tvWorkitems.FindNodeByMather(node =>
+				{
+					var desc = node.Tag as WorkitemDescriptor;
+					return desc != null && desc.Workitem.Id == CurrentWorkitemId;
+				});
+				if (selectedNode != null)
+				{
+					tvWorkitems.SelectedNode = selectedNode;
+					return;
+				}
+			}
 
-        public void ExpandCurrentNode() {
-            if (tvWorkitems.SelectedNode != null) {
-                tvWorkitems.SelectedNode.Expand(false);
-            }
-        }
-    }
-    public static class AdvTreeViewExtensions
-    {
-        public static TreeNodeAdv FindNodeByMather(this TreeViewAdv node, Predicate<TreeNodeAdv> matcher)
-        {
-            return FindNodeByMather(node.Root, matcher);
-        }
+			var root = tvWorkitems.Root;
 
-        private static TreeNodeAdv FindNodeByMather(TreeNodeAdv root, Predicate<TreeNodeAdv> matcher)
-        {
-            foreach (var adv in root.Children)
-            {
-                if (matcher(adv))
-                {
-                    return adv;
-                }
-                var adv2 = FindNodeByMather(adv, matcher);
-                if (adv2 != null)
-                {
-                    return adv2;
-                }
-            }
-            return null;
-        }
-    }
+			if (root.Children.Count > 0)
+			{
+				tvWorkitems.SelectedNode = root.Children[0];
+			}
+			else
+			{
+				ResetPropertyView();
+			}
+		}
+
+		public void SelectWorkitem(Workitem item)
+		{
+			var foundNode = tvWorkitems.FindNodeByMather(node =>
+			{
+				var descriptor = node.Tag as WorkitemDescriptor;
+				return descriptor != null && item.Equals(descriptor.Workitem);
+			});
+			if (foundNode != null)
+			{
+				tvWorkitems.SelectedNode = foundNode;
+			}
+		}
+
+		public void ExpandCurrentNode()
+		{
+			if (tvWorkitems.SelectedNode != null)
+			{
+				tvWorkitems.SelectedNode.Expand(false);
+			}
+		}
+	}
 }
